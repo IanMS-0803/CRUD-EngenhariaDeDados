@@ -1,6 +1,9 @@
 # Compiled class file
 *.class
 
+# IDE configuration
+*.vscode
+
 # Log file
 *.log
 
