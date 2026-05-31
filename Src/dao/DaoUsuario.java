@@ -67,8 +67,70 @@ public class DaoUsuario {
         return null;
     }
     // metodo para atualizar o usuario
+    public void atualizarUsuario(Usuario user){
+        Connection conexao = ConnectionFactory.getConnection();
+        PreparedStatement comando = null;
+
+        String sql = "UPDATE universidade.usuario SET nome = ?, data_nascimento = ?, email = ?, telefone = ?, login = ?, senha = ? WHERE cpf = ?::numeric";
+        
+        try {
+            comando = conexao.prepareStatement(sql);
+            comando.setString(1, user.getNome());
+
+            if (user.getData_nascimento() != null) {
+                comando.setDate(2, user.getData_nascimento());
+            } else {
+                comando.setNull(2, java.sql.Types.DATE);
+            }
+
+            if (user.getEmail() != null) {
+                java.sql.Array arrayEmail = conexao.createArrayOf("varchar", user.getEmail());
+                comando.setArray(3, arrayEmail);
+            } else {
+                comando.setNull(3, java.sql.Types.ARRAY);
+            }
+
+            if (user.getTelefone() != null) {
+                java.sql.Array arrayTelefone = conexao.createArrayOf("varchar", user.getTelefone());
+                comando.setArray(4, arrayTelefone);
+            } else {
+                comando.setNull(4, java.sql.Types.ARRAY);
+            }
+
+            comando.setString(5, user.getLogin());
+            comando.setString(6, user.getSenha());
+            comando.setString(7, user.getCpf());
+
+            comando.executeUpdate();
+            System.out.println("Usuário atualizado com sucesso!");
+        } catch (SQLException e) {
+            System.err.println("Erro interno no DAO ao atualizar usuário: " + e.getMessage());
+            throw new RuntimeException("Não foi possível atualizar o usuário. Motivo: " + e.getMessage(), e);
+        } finally {
+            ConnectionFactory.closeConnection(conexao, comando);
+        }
+    }
+
     // metodo para deletar um usuario
-    
+    public void deletarUsuario(String key){ /*primary key - CPF */
+        Connection conexao = ConnectionFactory.getConnection();
+        PreparedStatement comando = null;
+
+        String sql = "DELETE FROM universidade.usuario WHERE cpf = " + key;
+
+        try {
+            comando = conexao.prepareStatement(sql);
+            comando.executeUpdate();
+            System.out.println("Usuario deletado com sucesso");
+        } catch (SQLException e) {
+            System.err.println("Erro interno no DAO ao deletar usuário: " + e.getMessage());
+            throw new RuntimeException("Não foi possível deletar o usuário. Motivo: " + e.getMessage(), e);
+        } finally {
+            ConnectionFactory.closeConnection(conexao, comando);
+        }
+    }
+
+
     // metodo para inserir um usuario
     public void inserirUsuario(Usuario user) {
         Connection conexao = ConnectionFactory.getConnection();
