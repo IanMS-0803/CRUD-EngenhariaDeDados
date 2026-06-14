@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Acadêmico RDS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="tela-login" class="card-login">
+        <h2>Acesso ao PostgreSQL RDS</h2>
+        <input type="text" id="db-user" placeholder="Usuário AWS">
+        <input type="password" id="db-pass" placeholder="Senha AWS">
+        <button id="btn-conectar">Conectar ao Banco</button>
+    </div>
+
+    <div id="tela-dashboard" style="display: none;" class="dashboard-grid">
+        <header class="main-header">
+            <span id="status-banco">Conectado</span>
+            <input type="text" id="txt-busca" placeholder="Filtrar registros em tempo real...">
+        </header>
+
+        <aside class="sidebar">
+            <h3>ENTIDADES</h3>
+            <button class="active" data-entidade="usuario" onclick="selecionarEntidade('usuario')">Usuários</button>
+            <button data-entidade="curso" onclick="selecionarEntidade('curso')">Cursos</button>
+            <button data-entidade="estudante" onclick="selecionarEntidade('estudante')">Estudantes</button>
+            <button data-entidade="vinculo" onclick="selecionarEntidade('vinculo')">Vínculos</button>
+        </aside>
+
+        <main class="table-container">
+            <table id="tabela-dados">
+                <thead><tr id="cabecalho-tabela"></tr></thead>
+                <tbody id="corpo-tabela"></tbody>
+            </table>
+        </main>
+
+        <footer class="action-footer">
+            <button class="btn btn-add" id="open-add-modal">Adicionar Novo</button>
+            <button class="btn btn-edit" id="open-edit-modal">Editar Selecionado</button>
+            <button class="btn btn-del" id="execute-delete">Remover Selecionado</button>
+        </footer>
+    </div>
+
+    <div id="modal-formulario" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3 id="modal-titulo">Formulário de Usuário</h3>
+            <form id="form-usuario">
+                <div id="campos-formulario"></div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="close-modal">Cancelar</button>
+                    <button type="submit" class="btn btn-add">Salvar Dados</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

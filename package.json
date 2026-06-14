@@ -1,0 +1,14 @@
+{
+  "name": "crud-ed-js",
+  "version": "1.0.0",
+  "description": "Servidor CRUD universitário com Node.js, Express e bancos PostgreSQL/MongoDB",
+  "main": "Src/server.js",
+  "scripts": {
+    "start": "node Src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mongodb": "^6.1.0",
+    "pg": "^8.6.0"
+  }
+}
