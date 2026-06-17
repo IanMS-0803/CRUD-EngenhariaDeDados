@@ -23,13 +23,13 @@ async function atualizar(dados) {
 
     const pool = db.getDbAtivo();
     const sql = `UPDATE universidade.curso SET nome = $1, grau = $2, turno = $3, campus = $4, nivel = $5 
-                 WHERE "idCurso" = $6`;
+                 WHERE idCurso = $6`;
     await pool.query(sql, [curso.nome, curso.grau, curso.turno, curso.campus, curso.nivel, curso.idCurso]);
 }
 
 async function deletar(idCurso) {
     const pool = db.getDbAtivo();
-    await pool.query('DELETE FROM universidade.curso WHERE "idCurso" = $1', [idCurso]);
+    await pool.query('DELETE FROM universidade.curso WHERE idCurso = $1', [idCurso]);
 }
 
 module.exports = { listarTodos, inserir, atualizar, deletar };
