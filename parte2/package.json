@@ -1,0 +1,14 @@
+{
+  "name": "crud-universidade-mongodb-parte2",
+  "version": "2.0.0",
+  "description": "Parte 2 — CRUD completo do esquema SQL da universidade no MongoDB (EC2 AWS) com padrão Repository",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mongoose": "^8.4.0"
+  }
+}
