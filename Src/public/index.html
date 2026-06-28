@@ -3,18 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Acadêmico RDS</title>
+    <title>Sistema Acadêmico</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="tela-login" class="card-login">
-        <h2>Acesso ao PostgreSQL RDS</h2>
-        <input type="text" id="db-user" placeholder="Usuário AWS">
-        <input type="password" id="db-pass" placeholder="Senha AWS">
-        <button id="btn-conectar">Conectar ao Banco</button>
+    <!-- TELA 1: Seleção do Banco -->
+    <div id="tela-selecao" class="card-login">
+        <h2>Sistema Acadêmico</h2>
+        <p class="subtitulo">Selecione o banco de dados para conectar</p>
+        <div class="db-selector">
+            <button class="db-option" id="btn-escolher-postgres" onclick="escolherBanco('postgres')">
+                <span class="db-icon">🐘</span>
+                <span class="db-label">PostgreSQL</span>
+                <span class="db-desc">AWS RDS</span>
+            </button>
+            <button class="db-option" id="btn-escolher-mongo" onclick="escolherBanco('mongo')">
+                <span class="db-icon">🍃</span>
+                <span class="db-label">MongoDB</span>
+                <span class="db-desc">Instância própria</span>
+            </button>
+        </div>
     </div>
 
+    <!-- TELA 2a: Login PostgreSQL -->
+    <div id="tela-login-postgres" class="card-login" style="display:none;">
+        <button class="btn-voltar" onclick="voltarSelecao()">← Voltar</button>
+        <h2>Acesso ao PostgreSQL</h2>
+        <p class="subtitulo">AWS RDS — BancoUFS</p>
+        <input type="text" id="pg-user" placeholder="Usuário AWS">
+        <input type="password" id="pg-pass" placeholder="Senha AWS">
+        <button id="btn-conectar-postgres">Conectar ao PostgreSQL</button>
+    </div>
+
+    <!-- TELA 2b: Login MongoDB -->
+    <div id="tela-login-mongo" class="card-login" style="display:none;">
+        <button class="btn-voltar" onclick="voltarSelecao()">← Voltar</button>
+        <h2>Acesso ao MongoDB</h2>
+        <p class="subtitulo">Informe os dados da sua instância</p>
+        <input type="text" id="mg-user" placeholder="Usuário">
+        <input type="password" id="mg-pass" placeholder="Senha">
+        <input type="text" id="mg-host" placeholder="Endereço IPv4 (ex: 192.168.1.100:27017)">
+        <button id="btn-conectar-mongo">Conectar ao MongoDB</button>
+    </div>
+
+    <!-- TELA 3: Dashboard -->
     <div id="tela-dashboard" style="display: none;" class="dashboard-grid">
         <header class="main-header">
             <span id="status-banco">Conectado</span>
@@ -43,12 +76,12 @@
         </footer>
     </div>
 
+    <!-- Modal -->
     <div id="modal-formulario" class="modal-overlay" style="display: none;">
         <div class="modal-content">
-            <h3 id="modal-titulo">Formulário de Usuário</h3>
+            <h3 id="modal-titulo">Formulário</h3>
             <form id="form-usuario">
                 <div id="campos-formulario"></div>
-                
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" id="close-modal">Cancelar</button>
                     <button type="submit" class="btn btn-add">Salvar Dados</button>

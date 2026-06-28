@@ -1,36 +1,73 @@
 const { Pool } = require('pg');
-const { MongoClient } = require('mongodb');
+const mongoose = require('mongoose');
 
-// Estado global das conexões (Substitui o DatabaseContext)
 let postgresPool = null;
-let mongoClient = null;
-let dbAtivo = null; // 'postgres' ou 'mongo'
+let activeDb = null; // 'postgres' ou 'mongo'
 
 function conectarPostgres(user, password) {
-    postgresPool = new Pool({
-        user: user,
-        password: password,
-        host: 'postgres-ufs-ed.crhmjqwbzcke.us-east-1.rds.amazonaws.com', // URL do seu RDS AWS
+    if (!user || !password) {
+        throw new Error('Usuário e senha são obrigatórios para conexão PostgreSQL.');
+    }
+
+    const pool = new Pool({
+        user,
+        password,
+        host: 'postgres-ufs-ed.crhmjqwbzcke.us-east-1.rds.amazonaws.com',
         database: 'BancoUFS',
         port: 5432,
-        ssl: { rejectUnauthorized: false } // Necessário para a maioria dos RDS AWS
+        ssl: { rejectUnauthorized: false }
     });
-    dbAtivo = 'postgres';
-    return postgresPool;
+
+    return pool;
 }
 
-async function conectarMongo(user, password) {
-    const uri = `mongodb+srv://${user}:${password}@seu-cluster.mongodb.net/?retryWrites=true&w=majority`;
-    mongoClient = new MongoClient(uri);
-    await mongoClient.connect();
-    dbAtivo = 'mongo';
-    return mongoClient.db('universidade');
+function ativarPostgres(pool) {
+    postgresPool = pool;
+    activeDb = 'postgres';
+}
+
+async function conectarMongo(user, password, host) {
+    if (!user || !password || !host) {
+        throw new Error('Usuário, senha e endereço IPv4 são obrigatórios para conexão MongoDB.');
+    }
+
+    const encodedUser = encodeURIComponent(user);
+    const encodedPassword = encodeURIComponent(password);
+    const trimmedHost = host.trim();
+    const uri = `mongodb://${encodedUser}:${encodedPassword}@${trimmedHost}/universidade?authSource=admin`;
+
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+    activeDb = 'mongo';
+    return mongoose.connection;
+}
+
+function estaAtiva() {
+    if (activeDb === 'postgres') return !!postgresPool;
+    if (activeDb === 'mongo') return mongoose.connection.readyState === 1;
+    return false;
+}
+
+function getTipo() {
+    return activeDb;
 }
 
 function getDbAtivo() {
-    if (dbAtivo === 'postgres') return postgresPool;
-    if (dbAtivo === 'mongo') return mongoClient.db('universidade');
-    throw new Error("Nenhum banco de dados configurado ou ativo.");
+    if (activeDb === 'postgres') return postgresPool;
+    if (activeDb === 'mongo') return mongoose.connection;
+    throw new Error('Nenhuma conexão de banco de dados ativa. Conecte-se antes de usar a API.');
 }
 
-module.exports = { conectarPostgres, conectarMongo, getDbAtivo, status: () => dbAtivo };
+async function verificarPostgres() {
+    if (!postgresPool) throw new Error('PostgreSQL não está conectado.');
+    await postgresPool.query('SELECT 1');
+}
+
+module.exports = {
+    conectarPostgres,
+    ativarPostgres,
+    conectarMongo,
+    getTipo,
+    getDbAtivo,
+    estaAtiva,
+    verificarPostgres
+};
