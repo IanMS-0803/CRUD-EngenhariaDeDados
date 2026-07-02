@@ -1,18 +1,22 @@
 const { Pool } = require('pg');
 const mongoose = require('mongoose');
+const configManager = require('./configManager');
 
 let postgresPool = null;
 let activeDb = null; // 'postgres' ou 'mongo'
 
-function conectarPostgres(user, password) {
+function conectarPostgres(user, password, host = null) {
     if (!user || !password) {
         throw new Error('Usuário e senha são obrigatórios para conexão PostgreSQL.');
     }
 
+    // Usa o host fornecido ou carrega do arquivo config
+    const postgresHost = host || configManager.getPostgresHost();
+
     const pool = new Pool({
         user,
         password,
-        host: 'postgres-ufs-ed.crhmjqwbzcke.us-east-1.rds.amazonaws.com',
+        host: postgresHost,
         database: 'BancoUFS',
         port: 5432,
         ssl: { rejectUnauthorized: false }
@@ -69,5 +73,6 @@ module.exports = {
     getTipo,
     getDbAtivo,
     estaAtiva,
-    verificarPostgres
+    verificarPostgres,
+    configManager
 };

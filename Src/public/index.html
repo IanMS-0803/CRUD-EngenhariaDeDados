@@ -33,6 +33,13 @@
         <p class="subtitulo">AWS RDS — BancoUFS</p>
         <input type="text" id="pg-user" placeholder="Usuário AWS">
         <input type="password" id="pg-pass" placeholder="Senha AWS">
+        <div class="config-toggle">
+            <label>
+                <input type="checkbox" id="chk-editar-config-pg" onchange="toggleConfigPG()">
+                ⚙️ Editar endereço do servidor PostgreSQL
+            </label>
+        </div>
+        <input type="text" id="pg-host" placeholder="Host PostgreSQL (AWS RDS)" style="display:none;">
         <button id="btn-conectar-postgres">Conectar ao PostgreSQL</button>
     </div>
 
@@ -43,7 +50,13 @@
         <p class="subtitulo">Informe os dados da sua instância</p>
         <input type="text" id="mg-user" placeholder="Usuário">
         <input type="password" id="mg-pass" placeholder="Senha">
-        <input type="text" id="mg-host" placeholder="Endereço IPv4 (ex: 192.168.1.100:27017)">
+        <div class="config-toggle">
+            <label>
+                <input type="checkbox" id="chk-editar-config-mg" onchange="toggleConfigMG()">
+                ⚙️ Editar e salvar endereço do MongoDB
+            </label>
+        </div>
+        <input type="text" id="mg-host" placeholder="Endereço IPv4 (ex: 192.168.1.100:27017)" style="display: none;">
         <button id="btn-conectar-mongo">Conectar ao MongoDB</button>
     </div>
 
@@ -52,6 +65,7 @@
         <header class="main-header">
             <span id="status-banco">Conectado</span>
             <input type="text" id="txt-busca" placeholder="Filtrar registros em tempo real...">
+            <button class="btn btn-trocar-banco" id="btn-trocar-banco" title="Retornar à seleção de banco de dados">🔄 Trocar BD</button>
         </header>
 
         <aside class="sidebar">

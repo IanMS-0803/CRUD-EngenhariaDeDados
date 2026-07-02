@@ -4,6 +4,8 @@ let entidadeAtiva = 'usuario';
 let idSelecionado = null;
 let modoFormulario = 'ADD';
 let bancoAtivo = null; // 'postgres' | 'mongo'
+let configAtual = {}; // Configurações de host
+let enumsDisponíveis = {}; // Enums carregados do servidor
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 function normalizarLista(valor) {
@@ -30,19 +32,161 @@ function getValorCampoInput(id) {
     return el ? el.value : '';
 }
 
+// ─── Gerenciamento de Configurações ───────────────────────────────────────────
+
+/**
+ * Carrega as configurações do servidor na inicialização
+ */
+async function carregarConfigurações() {
+    try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+            configAtual = await res.json();
+            // Preenche os campos com valores salvos
+            document.getElementById('pg-host').value = configAtual.postgresHost || '';
+            document.getElementById('mg-host').value = configAtual.mongoHost || '';
+        }
+    } catch (err) {
+        console.warn('Erro ao carregar configurações:', err);
+    }
+}
+
+/**
+ * Salva as configurações atuais no servidor
+ */
+async function salvarConfigurações() {
+    const postgresHost = document.getElementById('pg-host').value.trim();
+    const mongoHost = document.getElementById('mg-host').value.trim();
+
+    if (!postgresHost || !mongoHost) {
+        alert('⚠️ Preencha ambos os endereços de host para salvar as configurações.');
+        return false;
+    }
+
+    try {
+        const res = await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                postgresHost,
+                mongoHost
+            })
+        });
+
+        if (res.ok) {
+            const resultado = await res.json();
+            alert('✓ ' + resultado.mensagem);
+            configAtual = { postgresHost, mongoHost };
+            return true;
+        } else {
+            const erro = await res.json();
+            alert('❌ ' + erro.mensagem);
+            return false;
+        }
+    } catch (err) {
+        alert('❌ Erro ao salvar: ' + err.message);
+        return false;
+    }
+}
+
+/**
+ * Toggle para mostrar/ocultar campo de editar host PostgreSQL
+ */
+function toggleConfigPG() {
+    const chk = document.getElementById('chk-editar-config-pg');
+    const input = document.getElementById('pg-host');
+    input.style.display = chk.checked ? 'block' : 'none';
+    
+    if (chk.checked) {
+        input.focus();
+    }
+}
+
+/**
+ * Toggle para mostrar/ocultar campo de editar host MongoDB
+ */
+function toggleConfigMG() {
+    const chk = document.getElementById('chk-editar-config-mg');
+    const input = document.getElementById('mg-host');
+    input.style.display = chk.checked ? 'block' : 'none';
+
+    if (chk.checked) {
+        input.focus();
+    }
+}
+
+// ─── Gerenciamento de Enums ──────────────────────────────────────────────────
+
+/**
+ * Carrega os enums disponíveis do servidor
+ */
+async function carregarEnums() {
+    try {
+        const res = await fetch('/api/enums');
+        if (res.ok) {
+            const data = await res.json();
+            enumsDisponíveis = data.enums || {};
+            console.log('✓ Enums carregados:', enumsDisponíveis);
+        }
+    } catch (err) {
+        console.warn('Erro ao carregar enums:', err);
+    }
+}
+
+
 // ─── Seleção de Banco ─────────────────────────────────────────────────────────
 function escolherBanco(tipo) {
     document.getElementById('tela-selecao').style.display = 'none';
     if (tipo === 'postgres') {
         document.getElementById('tela-login-postgres').style.display = 'flex';
+        carregarConfigurações(); // Carrega as configurações salvas
     } else {
         document.getElementById('tela-login-mongo').style.display = 'flex';
+        carregarConfigurações(); // Carrega as configurações salvas
     }
 }
 
 function voltarSelecao() {
     document.getElementById('tela-login-postgres').style.display = 'none';
     document.getElementById('tela-login-mongo').style.display = 'none';
+    document.getElementById('chk-editar-config-pg').checked = false;
+    document.getElementById('chk-editar-config-mg').checked = false;
+    toggleConfigPG();
+    toggleConfigMG();
+    document.getElementById('tela-selecao').style.display = 'flex';
+}
+
+/**
+ * Retorna à tela de seleção de banco após estar no dashboard
+ * Limpa o estado da aplicação
+ */
+function trocarBancoDados() {
+    // Limpa estado global
+    cacheDados = [];
+    entidadeAtiva = 'usuario';
+    idSelecionado = null;
+    modoFormulario = 'ADD';
+    bancoAtivo = null;
+    
+    // Oculta dashboard e modal
+    document.getElementById('tela-dashboard').style.display = 'none';
+    document.getElementById('modal-formulario').style.display = 'none';
+    
+    // Limpa campos de login
+    document.getElementById('pg-user').value = '';
+    document.getElementById('pg-pass').value = '';
+    document.getElementById('mg-user').value = '';
+    document.getElementById('mg-pass').value = '';
+    document.getElementById('mg-host').value = '';
+    document.getElementById('pg-host').value = '';
+    
+    // Limpa checkboxes de configuração
+    document.getElementById('chk-editar-config-pg').checked = false;
+    document.getElementById('chk-editar-config-mg').checked = false;
+    toggleConfigPG();
+    toggleConfigMG();
+    
+    // Volta à seleção
     document.getElementById('tela-selecao').style.display = 'flex';
 }
 
@@ -50,7 +194,28 @@ function voltarSelecao() {
 document.getElementById('btn-conectar-postgres').addEventListener('click', async () => {
     const usuario = document.getElementById('pg-user').value.trim();
     const senha   = document.getElementById('pg-pass').value;
+    const editando = document.getElementById('chk-editar-config-pg').checked;
+    const novoHost = document.getElementById('pg-host').value.trim();
+
     if (!usuario || !senha) return alert('Preencha usuário e senha.');
+    
+    // Se está editando, salva a nova configuração primeiro
+    if (editando && novoHost) {
+        const mongoHost = document.getElementById('mg-host').value.trim() || configAtual.mongoHost;
+        const res = await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                postgresHost: novoHost,
+                mongoHost: mongoHost
+            })
+        });
+        
+        if (!res.ok) {
+            const erro = await res.json();
+            return alert('Erro ao salvar configuração: ' + erro.mensagem);
+        }
+    }
 
     const res = await fetch('/api/conectar/postgres', {
         method: 'POST',
@@ -76,7 +241,27 @@ document.getElementById('btn-conectar-mongo').addEventListener('click', async ()
     const usuario = document.getElementById('mg-user').value.trim();
     const senha   = document.getElementById('mg-pass').value;
     const host    = document.getElementById('mg-host').value.trim();
+    const editando = document.getElementById('chk-editar-config-mg').checked;
+
     if (!usuario || !senha || !host) return alert('Preencha usuário, senha e endereço IPv4.');
+
+    // Se está editando, salva a nova configuração primeiro
+    if (editando) {
+        const postgresHost = document.getElementById('pg-host').value.trim() || configAtual.postgresHost;
+        const res = await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                postgresHost: postgresHost,
+                mongoHost: host
+            })
+        });
+        
+        if (!res.ok) {
+            const erro = await res.json();
+            return alert('Erro ao salvar configuração: ' + erro.mensagem);
+        }
+    }
 
     const res = await fetch('/api/conectar/mongo', {
         method: 'POST',
@@ -107,6 +292,67 @@ function getTituloEntidade() {
 }
 
 // ─── Campos de Formulário ─────────────────────────────────────────────────────
+
+/**
+ * Mapeia IDs de formulário para nomes de campos da entidade
+ */
+function getMapaFormulario() {
+    const mapa = {
+        usuario: {
+            'form-cpf': 'cpf',
+            'form-nome': 'nome',
+            'form-data': 'data_nascimento',
+            'form-email': 'email',
+            'form-telefone': 'telefone',
+            'form-login': 'login',
+            'form-senha': 'senha'
+        },
+        curso: {
+            'form-nome': 'nome',
+            'form-grau': 'grau',
+            'form-turno': 'turno',
+            'form-campus': 'campus',
+            'form-nivel': 'nivel'
+        },
+        estudante: {
+            'form-matricula': 'matricula',
+            'form-cpf': 'cpf',
+            'form-nome': 'nome',
+            'form-login': 'login',
+            'form-senha': 'senha',
+            'form-mc': 'mc',
+            'form-ano': 'anoIngresso',
+            'form-curso': 'idCurso',
+            'form-status': 'status'
+        },
+        vinculo: {
+            'form-idvinculo': 'idVinculo',
+            'form-matricula': 'matricula',
+            'form-curso': 'idCurso',
+            'form-data-entrada': 'dataIngresso',
+            'form-status': 'status',
+            'form-data-saida': 'dataSaida'
+        }
+    };
+    return mapa[entidadeAtiva] || mapa.usuario;
+}
+
+/**
+ * Obtém o nome do campo da entidade pelo ID do formulário
+ */
+function getCampoEntidade(formId) {
+    const mapa = getMapaFormulario();
+    return mapa[formId] || formId;
+}
+
+/**
+ * Obtém as opções de enum para um campo do formulário
+ */
+function getOpcoesEnum(formId) {
+    const nomeCampo = getCampoEntidade(formId);
+    return (enumsDisponíveis[entidadeAtiva]?.[nomeCampo]) || [];
+}
+
 function getCamposFormulario() {
     const campos = {
         usuario: [
@@ -120,10 +366,10 @@ function getCamposFormulario() {
         ],
         curso: [
             { id: 'form-nome',   label: 'Nome',  type: 'text', required: true },
-            { id: 'form-grau',   label: 'Grau',  type: 'text', required: true },
-            { id: 'form-turno',  label: 'Turno', type: 'text', required: true },
+            { id: 'form-grau',   label: 'Grau',  type: 'select', required: true },
+            { id: 'form-turno',  label: 'Turno', type: 'select', required: true },
             { id: 'form-campus', label: 'Campus',type: 'text' },
-            { id: 'form-nivel',  label: 'Nível', type: 'text' }
+            { id: 'form-nivel',  label: 'Nível', type: 'select' }
         ],
         estudante: [
             { id: 'form-matricula', label: 'Matrícula',        type: 'text',    required: true },
@@ -141,7 +387,7 @@ function getCamposFormulario() {
             { id: 'form-matricula',    label: 'Matrícula do Estudante',    type: 'text', required: true },
             { id: 'form-curso',        label: 'ID do Curso',               type: 'text', required: true },
             { id: 'form-data-entrada', label: 'Data de Entrada',           type: 'date' },
-            { id: 'form-status',       label: 'Status',                    type: 'text', required: true },
+            { id: 'form-status',       label: 'Status',                    type: 'select', required: true },
             { id: 'form-data-saida',   label: 'Data de Saída',             type: 'date' }
         ]
     };
@@ -152,14 +398,45 @@ function renderizarFormulario() {
     const container = document.getElementById('campos-formulario');
     if (!container) return;
     container.innerHTML = '';
+    
     getCamposFormulario().forEach(campo => {
-        const input = document.createElement('input');
-        input.id = campo.id;
-        input.name = campo.id;
-        input.type = campo.type;
-        input.placeholder = campo.label;
-        input.required = Boolean(campo.required);
-        container.appendChild(input);
+        // Se é um campo de select (enum)
+        if (campo.type === 'select') {
+            const select = document.createElement('select');
+            select.id = campo.id;
+            select.name = campo.id;
+            select.required = Boolean(campo.required);
+            select.className = 'form-field';
+            
+            // Adiciona opção vazia
+            const optionVazia = document.createElement('option');
+            optionVazia.value = '';
+            optionVazia.textContent = `Selecione ${campo.label.toLowerCase()}`;
+            optionVazia.disabled = true;
+            optionVazia.selected = true;
+            select.appendChild(optionVazia);
+            
+            // Adiciona opções do enum
+            const opcoes = getOpcoesEnum(campo.id);
+            opcoes.forEach(opcao => {
+                const option = document.createElement('option');
+                option.value = opcao.value;
+                option.textContent = opcao.label;
+                select.appendChild(option);
+            });
+            
+            container.appendChild(select);
+        } else {
+            // Campos normais (text, password, date, etc.)
+            const input = document.createElement('input');
+            input.id = campo.id;
+            input.name = campo.id;
+            input.type = campo.type;
+            input.placeholder = campo.label;
+            input.required = Boolean(campo.required);
+            input.className = 'form-field';
+            container.appendChild(input);
+        }
     });
 }
 
@@ -251,6 +528,10 @@ const cabecalhoTabela= document.getElementById('cabecalho-tabela');
 
 async function carregarDados() {
     idSelecionado = null;
+    
+    // Carrega enums para preencher os selects corretamente
+    await carregarEnums();
+    
     try {
         const res = await fetch(getEndpointEntidade());
         if (!res.ok) {
@@ -370,6 +651,13 @@ document.getElementById('open-edit-modal').addEventListener('click', () => {
 });
 
 document.getElementById('close-modal').addEventListener('click', () => modal.style.display = 'none');
+
+// Botão de trocar banco de dados
+document.getElementById('btn-trocar-banco').addEventListener('click', () => {
+    if (confirm('Deseja retornar à seleção de banco de dados? Os dados não salvos serão perdidos.')) {
+        trocarBancoDados();
+    }
+});
 
 // ─── Formulário: Salvar / Atualizar ──────────────────────────────────────────
 form.addEventListener('submit', async e => {

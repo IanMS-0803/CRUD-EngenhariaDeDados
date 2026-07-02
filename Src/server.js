@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const db = require('./config/database');
+const enumsConfig = require('./config/enums');
 
 // Repositories PostgreSQL
 const pgUsuarioRepo  = require('./repositories/usuarioRepo');
@@ -143,6 +144,70 @@ app.post('/api/conectar/mongo', async (req, res) => {
 // Status do banco
 app.get('/api/status', (req, res) => {
     res.json({ tipo: getTipo(), ativo: db.estaAtiva() });
+});
+
+// ─── Configurações de Banco de Dados ──────────────────────────────────────────
+
+// Obter configurações atuais
+app.get('/api/config', (req, res) => {
+    try {
+        const config = db.configManager.lerConfig();
+        res.json({
+            status: 'sucesso',
+            mongoHost: config.mongoHost,
+            postgresHost: config.postgresHost
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'erro', mensagem: 'Erro ao obter configurações.' });
+    }
+});
+
+// Salvar configurações
+app.post('/api/config', (req, res) => {
+    try {
+        const { mongoHost, postgresHost } = req.body;
+        
+        if (!mongoHost || !postgresHost) {
+            return res.status(400).json({
+                status: 'erro',
+                mensagem: 'mongoHost e postgresHost são obrigatórios.'
+            });
+        }
+
+        const sucesso = db.configManager.salvarConfig({
+            mongoHost: mongoHost.trim(),
+            postgresHost: postgresHost.trim()
+        });
+
+        if (sucesso) {
+            res.json({
+                status: 'sucesso',
+                mensagem: 'Configurações salvas com sucesso!'
+            });
+        } else {
+            res.status(500).json({
+                status: 'erro',
+                mensagem: 'Erro ao salvar configurações.'
+            });
+        }
+    } catch (err) {
+        res.status(500).json({ status: 'erro', mensagem: err.message });
+    }
+});
+
+// ─── Enums (Validações de Campo) ──────────────────────────────────────────────
+
+// Obter todos os enums disponíveis
+app.get('/api/enums', (req, res) => {
+    try {
+        const enums = enumsConfig.getEnumsFormatados();
+        res.json({
+            status: 'sucesso',
+            enums: enums
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'erro', mensagem: 'Erro ao obter enums.' });
+    }
 });
 
 // ─── CRUD de Usuários ─────────────────────────────────────────────────────────
