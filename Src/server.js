@@ -359,4 +359,8 @@ app.delete('/api/vinculo/:id', async (req, res) => {
     } catch (err) { erro(res, err); }
 });
 
-app.listen(PORT, () => console.log(`Servidor unificado rodando em http://localhost:${PORT}`));
+if (require.main === module) {
+    app.listen(PORT, () => console.log(`Servidor unificado rodando em http://localhost:${PORT}`));
+}
+
+module.exports = app;
