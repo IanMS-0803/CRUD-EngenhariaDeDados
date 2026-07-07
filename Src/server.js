@@ -117,10 +117,11 @@ function normalizarListaMongo(lista, entidade) {
 
 // PostgreSQL (RDS)
 app.post('/api/conectar/postgres', async (req, res) => {
-    const { usuario, senha } = req.body;
+    const { usuario, senha, host } = req.body;
     if (!usuario || !senha) return res.status(400).json({ status: 'erro', mensagem: 'Usuário e senha são obrigatórios.' });
+    if (!host) return res.status(400).json({ status: 'erro', mensagem: 'Host PostgreSQL é obrigatório.' });
     try {
-        const pool = db.conectarPostgres(usuario, senha);
+        const pool = db.conectarPostgres(usuario, senha, host);
         await pool.query('SELECT 1');
         db.ativarPostgres(pool);
         res.json({ status: 'sucesso', mensagem: 'Conectado ao PostgreSQL (AWS RDS) com sucesso.', tipo: 'postgres' });
@@ -144,55 +145,6 @@ app.post('/api/conectar/mongo', async (req, res) => {
 // Status do banco
 app.get('/api/status', (req, res) => {
     res.json({ tipo: getTipo(), ativo: db.estaAtiva() });
-});
-
-// ─── Configurações de Banco de Dados ──────────────────────────────────────────
-
-// Obter configurações atuais
-app.get('/api/config', (req, res) => {
-    try {
-        const config = db.configManager.lerConfig();
-        res.json({
-            status: 'sucesso',
-            mongoHost: config.mongoHost,
-            postgresHost: config.postgresHost
-        });
-    } catch (err) {
-        res.status(500).json({ status: 'erro', mensagem: 'Erro ao obter configurações.' });
-    }
-});
-
-// Salvar configurações
-app.post('/api/config', (req, res) => {
-    try {
-        const { mongoHost, postgresHost } = req.body;
-        
-        if (!mongoHost || !postgresHost) {
-            return res.status(400).json({
-                status: 'erro',
-                mensagem: 'mongoHost e postgresHost são obrigatórios.'
-            });
-        }
-
-        const sucesso = db.configManager.salvarConfig({
-            mongoHost: mongoHost.trim(),
-            postgresHost: postgresHost.trim()
-        });
-
-        if (sucesso) {
-            res.json({
-                status: 'sucesso',
-                mensagem: 'Configurações salvas com sucesso!'
-            });
-        } else {
-            res.status(500).json({
-                status: 'erro',
-                mensagem: 'Erro ao salvar configurações.'
-            });
-        }
-    } catch (err) {
-        res.status(500).json({ status: 'erro', mensagem: err.message });
-    }
 });
 
 // ─── Enums (Validações de Campo) ──────────────────────────────────────────────

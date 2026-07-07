@@ -32,29 +32,46 @@ function getValorCampoInput(id) {
     return el ? el.value : '';
 }
 
-// ─── Gerenciamento de Configurações ───────────────────────────────────────────
+// ─── Gerenciamento de Configurações (localStorage) ───────────────────────────
+
+// Valores padrão de configuração
+const CONFIG_DEFAULTS = {
+    mongoHost: '192.168.1.1:27017',
+    postgresHost: 'postgres-ufs-ed.crhmjqwbzcke.us-east-1.rds.amazonaws.com'
+};
+
+const STORAGE_KEY = 'crud-config';
 
 /**
- * Carrega as configurações do servidor na inicialização
+ * Carrega as configurações do localStorage
  */
-async function carregarConfigurações() {
+function carregarConfigurações() {
     try {
-        const res = await fetch('/api/config');
-        if (res.ok) {
-            configAtual = await res.json();
-            // Preenche os campos com valores salvos
-            document.getElementById('pg-host').value = configAtual.postgresHost || '';
-            document.getElementById('mg-host').value = configAtual.mongoHost || '';
+        const stored = localStorage.getItem(STORAGE_KEY);
+        
+        if (stored) {
+            configAtual = JSON.parse(stored);
+        } else {
+            configAtual = { ...CONFIG_DEFAULTS };
         }
+        
+        // Preenche os campos com valores salvos
+        document.getElementById('pg-host').value = configAtual.postgresHost || CONFIG_DEFAULTS.postgresHost;
+        document.getElementById('mg-host').value = configAtual.mongoHost || CONFIG_DEFAULTS.mongoHost;
+        
+        console.log('✓ Configurações carregadas do localStorage');
     } catch (err) {
         console.warn('Erro ao carregar configurações:', err);
+        configAtual = { ...CONFIG_DEFAULTS };
+        document.getElementById('pg-host').value = CONFIG_DEFAULTS.postgresHost;
+        document.getElementById('mg-host').value = CONFIG_DEFAULTS.mongoHost;
     }
 }
 
 /**
- * Salva as configurações atuais no servidor
+ * Salva as configurações no localStorage
  */
-async function salvarConfigurações() {
+function salvarConfigurações() {
     const postgresHost = document.getElementById('pg-host').value.trim();
     const mongoHost = document.getElementById('mg-host').value.trim();
 
@@ -64,25 +81,17 @@ async function salvarConfigurações() {
     }
 
     try {
-        const res = await fetch('/api/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                postgresHost,
-                mongoHost
-            })
-        });
-
-        if (res.ok) {
-            const resultado = await res.json();
-            alert('✓ ' + resultado.mensagem);
-            configAtual = { postgresHost, mongoHost };
-            return true;
-        } else {
-            const erro = await res.json();
-            alert('❌ ' + erro.mensagem);
-            return false;
-        }
+        const config = {
+            postgresHost,
+            mongoHost
+        };
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+        configAtual = config;
+        
+        alert('✓ Configurações salvas localmente!');
+        console.log('✓ Configurações salvas no localStorage');
+        return true;
     } catch (err) {
         alert('❌ Erro ao salvar: ' + err.message);
         return false;
@@ -194,33 +203,28 @@ function trocarBancoDados() {
 document.getElementById('btn-conectar-postgres').addEventListener('click', async () => {
     const usuario = document.getElementById('pg-user').value.trim();
     const senha   = document.getElementById('pg-pass').value;
+    const host    = document.getElementById('pg-host').value.trim();
     const editando = document.getElementById('chk-editar-config-pg').checked;
-    const novoHost = document.getElementById('pg-host').value.trim();
 
     if (!usuario || !senha) return alert('Preencha usuário e senha.');
     
-    // Se está editando, salva a nova configuração primeiro
-    if (editando && novoHost) {
-        const mongoHost = document.getElementById('mg-host').value.trim() || configAtual.mongoHost;
-        const res = await fetch('/api/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                postgresHost: novoHost,
-                mongoHost: mongoHost
-            })
-        });
-        
-        if (!res.ok) {
-            const erro = await res.json();
-            return alert('Erro ao salvar configuração: ' + erro.mensagem);
+    // Se está editando, salva a nova configuração no localStorage
+    if (editando && host) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                postgresHost: host,
+                mongoHost: configAtual.mongoHost || CONFIG_DEFAULTS.mongoHost
+            }));
+            console.log('✓ Configuração PostgreSQL salva');
+        } catch (err) {
+            return alert('Erro ao salvar configuração: ' + err.message);
         }
     }
 
     const res = await fetch('/api/conectar/postgres', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario, senha })
+        body: JSON.stringify({ usuario, senha, host: host || configAtual.postgresHost })
     });
 
     if (res.ok) {
@@ -245,21 +249,16 @@ document.getElementById('btn-conectar-mongo').addEventListener('click', async ()
 
     if (!usuario || !senha || !host) return alert('Preencha usuário, senha e endereço IPv4.');
 
-    // Se está editando, salva a nova configuração primeiro
+    // Se está editando, salva a nova configuração no localStorage
     if (editando) {
-        const postgresHost = document.getElementById('pg-host').value.trim() || configAtual.postgresHost;
-        const res = await fetch('/api/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                postgresHost: postgresHost,
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                postgresHost: configAtual.postgresHost || CONFIG_DEFAULTS.postgresHost,
                 mongoHost: host
-            })
-        });
-        
-        if (!res.ok) {
-            const erro = await res.json();
-            return alert('Erro ao salvar configuração: ' + erro.mensagem);
+            }));
+            console.log('✓ Configuração MongoDB salva');
+        } catch (err) {
+            return alert('Erro ao salvar configuração: ' + err.message);
         }
     }
 
